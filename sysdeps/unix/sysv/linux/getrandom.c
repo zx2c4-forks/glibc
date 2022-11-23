@@ -26,6 +26,7 @@
 #include <tls-internal.h>
 
 #ifdef __NR_vgetrandom_alloc
+# include <signal-reentrancy.h>
 
 static struct
 {
@@ -91,7 +92,7 @@ out:
 }
 
 /* Return true if the syscall fallback should be issued in the case the vDSO
-   is not present or if any memory allocation fails.  */
+   is not present, in the case of reentrancy, or if any memory allocation fails.  */
 static bool
 __getrandom_internal (ssize_t *ret, void *buffer, size_t length,
                       unsigned int flags)
@@ -100,14 +101,16 @@ __getrandom_internal (ssize_t *ret, void *buffer, size_t length,
     return false;
 
   struct tls_internal_t *ti = __glibc_tls_internal ();
-  void *state = ti->getrandom_buf;
+  void *state;
+  if (!signal_exchange_value (&ti->getrandom_buf, &state))
+    return false;
 
+  bool r = false;
   if (state == NULL)
     {
       state = vgetrandom_get_state ();
       if (state == NULL)
-        return false;
-      ti->getrandom_buf = state;
+        goto out;
     }
 
   *ret = GLRO(dl_vdso_getrandom)(buffer, length, flags, state);
@@ -116,7 +119,11 @@ __getrandom_internal (ssize_t *ret, void *buffer, size_t length,
       __set_errno (INTERNAL_SYSCALL_ERRNO (*ret));
       *ret = -1;
     }
-  return true;
+  r = true;
+
+out:
+  signal_store_value (&ti->getrandom_buf, state);
+  return r;
 }
 #endif
 

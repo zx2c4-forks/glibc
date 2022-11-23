@@ -1,5 +1,5 @@
-/* Per-thread state.  Generic version.
-   Copyright (C) 2020-2022 Free Software Foundation, Inc.
+/* Handle Linux signal reentracy.
+   Copyright (C) 2022 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -16,14 +16,29 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
-#ifndef _TLS_INTERNAL_STRUCT_H
-#define _TLS_INTERNAL_STRUCT_H 1
+#ifndef _SIGNAL_REENTRACY_H
+#define _SIGNAL_REENTRACY_H
 
-struct tls_internal_t
+static inline bool
+signal_exchange_value (void **mem, void **v)
 {
-  char *strsignal_buf;
-  char *strerror_l_buf;
-  void *malloc_in_use;
-};
+  uintptr_t addr = 1UL;
+  asm volatile ("xaddq %1, %0"
+		: "+m" (*mem), "+r" (addr)
+		: : "memory");
+  if (addr & 1UL)
+    {
+      *mem = (void *) addr;
+      return false;
+    }
+  *v = (void *) addr;
+  return true;
+}
+
+static inline void
+signal_store_value (void **mem, void *value)
+{
+  *(volatile void **) mem = value;
+}
 
 #endif
