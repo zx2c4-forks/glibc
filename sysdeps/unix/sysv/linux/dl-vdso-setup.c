@@ -44,14 +44,14 @@
 # ifdef HAVE_CLOCK_GETTIME_VSYSCALL
 PROCINFO_CLASS int (*_dl_vdso_clock_gettime) (clockid_t,
 					      struct timespec *) RELRO;
-#endif
+# endif
 # ifdef HAVE_CLOCK_GETTIME64_VSYSCALL
 PROCINFO_CLASS int (*_dl_vdso_clock_gettime64) (clockid_t,
 						struct __timespec64 *) RELRO;
-#endif
+# endif
 # ifdef HAVE_GETTIMEOFDAY_VSYSCALL
 PROCINFO_CLASS int (*_dl_vdso_gettimeofday) (struct timeval *, void *) RELRO;
-#endif
+# endif
 # ifdef HAVE_TIME_VSYSCALL
 PROCINFO_CLASS time_t (*_dl_vdso_time) (time_t *) RELRO;
 # endif
@@ -71,6 +71,11 @@ PROCINFO_CLASS int (*_dl_vdso_clock_getres_time64) (clockid_t,
 # ifdef HAVE_GET_TBFREQ
 PROCINFO_CLASS uint64_t (*_dl_vdso_get_tbfreq)(void) RELRO;
 # endif
+
+PROCINFO_CLASS ssize_t (*_dl_vdso_getrandom)(void *buffer, size_t len,
+					     unsigned int flags, void *state)
+     RELRO;
+
 #endif
 
 #undef RELRO
